@@ -14,11 +14,32 @@
 import os
 import watchdog
 import subtitler
-from dotenv import load_dotenv
- 
+import dotenv
+import re
+
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(dotenv_path)
+dotenv.load_dotenv(dotenv_path)
 
 ROOT_MONITORED_PATH = os.getenv('ROOT_MONITORED_PATH')
-VLC_HIST_FILE = os.getenv('VLC_HIST_FILE')  # used to find the how much 
+VLC_HIST_FILE = os.getenv('VLC_HIST_FILE')  # used to find the how much
                                             # of the video has already been played.
+
+def get_new_movie_filename(file_path):
+    """
+    Argument: path to file that name is required for
+    Return Value: New file path with name in correct format
+    """
+    file_name = os.path.splitext(os.path.basename(os.path.realpath(file_path)))[0]
+    new_file_name = re.sub(r"\.", " ", file_name)
+    new_file_name = re.sub(r"\(|\)|\[|\]|\{|\}", "", new_file_name)
+    match_from_beginning = re.search(r"(.*)\b(18|19|20\d{2})\b", new_file_name) # doing it this way will make it so that
+    match_from_end = re.search(r"\b(18|19|20\d{2})\b.*", new_file_name)         # files like "blade.runner.2049.2017.mp4"
+    if not (match_from_end and match_from_beginning):                           # will become "blade runner 2049 (2017).mp4"
+        return None                                                             # and not "blade runner (2049).mp4"
+    name = match_from_beginning.group(1)                                        
+    year = match_from_end.group(1)                                              
+    new_file_name = f"{name}({year})"
+    return new_file_name
+
+print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
+print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\El.Camino.A.Breaking.Bad.Movie.2019.1080p.WEBRip.x264-[YTS.LT].mp4'))
