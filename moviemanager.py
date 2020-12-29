@@ -12,17 +12,23 @@
 # it the directory icon.
 
 import os
+from configparser import ConfigParser
+import urllib.parse
 import watchdog
 import subtitler
 import dotenv
 import re
-
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-dotenv.load_dotenv(dotenv_path)
+import cv2
 
 ROOT_MONITORED_PATH = os.getenv('ROOT_MONITORED_PATH')
 VLC_HIST_FILE = os.getenv('VLC_HIST_FILE')  # used to find the how much
                                             # of the video has already been played.
+
+configur = ConfigParser(interpolation=None)
+configur.read(VLC_HIST_FILE)
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+dotenv.load_dotenv(dotenv_path)
 
 def get_new_movie_filename(file_path):
     """
@@ -41,5 +47,27 @@ def get_new_movie_filename(file_path):
     new_file_name = f"{name}({year})"
     return new_file_name
 
-print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
-print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\El.Camino.A.Breaking.Bad.Movie.2019.1080p.WEBRip.x264-[YTS.LT].mp4'))
+def is_movie_watched(movie_path):
+    """
+    Returns True if movie at movie_path has been watched such that less than one minute remains.
+    (Checks VLC_HIST_FILE to get info about recently watched movies)
+    Returns False if file isn't in recently watched files or if it's been watched for less 
+    than the entire length - 1 minute.
+    """
+    file_paths = [os.path.realpath(urllib.parse.unquote(string[8:])) for string in configur.get('RecentsMRL', 'list').split(", ")]
+    if not os.path.realpath(movie_path) in file_paths:
+        return False
+    times = [time for time in configur.get('RecentsMRL', 'times').split(', ')]
+    watched_time = int(times[file_paths.index(movie_path)]) / 1000
+
+    video = cv2.VideoCapture(movie_path)
+    fps = video.get(cv2.CAP_PROP_FPS)
+    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    runtime = frame_count / fps
+    return runtime - watched_time <= 60  
+
+print(is_movie_watched("a"))
+print(is_movie_watched(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
+# print(configur.get('RecentsMRL', 'times'))
+# print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
+# print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\El.Camino.A.Breaking.Bad.Movie.2019.1080p.WEBRip.x264-[YTS.LT].mp4'))
