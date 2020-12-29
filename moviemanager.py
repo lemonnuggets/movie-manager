@@ -14,6 +14,11 @@
 import os
 import watchdog
 import subtitler
+from dotenv import load_dotenv
+ 
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
-ROOT_MONITORED_PATH = r"C:\Users\adamj\Videos\.MOVIES\"
-VLC_HIST_FILE = r"C:\Users\adamj\AppData\Roaming\vlc\vlc-qt-interface.ini" # used to find the how much of the video has already been played.
+ROOT_MONITORED_PATH = os.getenv('ROOT_MONITORED_PATH')
+VLC_HIST_FILE = os.getenv('VLC_HIST_FILE')  # used to find the how much 
+                                            # of the video has already been played.
