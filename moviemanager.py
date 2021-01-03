@@ -14,24 +14,79 @@ A python script to manage your movies.
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon.
 
+"""
+Instead of using the vlc-qt-interface file changes to try and find if a movie has been watched,
+use the last file that vlc modifies/moves/closes to notice that vlc has just been closed and then
+ask the user if they have finished watching the most recent movie in RecentMRL, if the time watched is 0.
+"""
+
 import os
+import shutil
+import time
 from configparser import ConfigParser
 import urllib.parse
 import re
-import watchdog
 import dotenv
 import cv2
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 import subtitler
 
-ROOT_MONITORED_PATH = os.getenv('ROOT_MONITORED_PATH')
-VLC_HIST_FILE = os.getenv('VLC_HIST_FILE')  # used to find the how much
-                                            # of the video has already been played.
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+dotenv.load_dotenv(dotenv_path)
+
+ROOT_MONITORED_PATH = os.path.realpath(os.getenv('ROOT_MONITORED_PATH'))
+VLC_HIST_FILE = os.path.realpath(os.getenv('VLC_HIST_FILE'))    # used to find the how much
+                                                                # of the video has already been played.
+WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
+TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
+VLC_HIST_FOLDER = os.path.realpath(os.getenv('VLC_HIST_FOLDER'))
+print(ROOT_MONITORED_PATH, VLC_HIST_FILE, WATCHED_FOLDER, TO_WATCH_FOLDER, VLC_HIST_FOLDER)
 
 configur = ConfigParser(interpolation=None)
 configur.read(VLC_HIST_FILE)
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-dotenv.load_dotenv(dotenv_path)
+class WatchedHandler(FileSystemEventHandler):
+    def __init__(self, callback, src_folder=None, dest_folder=None, file_to_track=None):
+        self.src_folder = src_folder
+        self.dest_folder = dest_folder
+        self.callback = callback
+        self.file_to_track = file_to_track
+    
+    def on_any_event(self, event):
+        print("ANY EVENT ->",event)
+    
+    def on_moved(self, event):
+        print("in on_moved() -> ")
+        self.callback(self.src_folder, self.dest_folder, self.file_to_track, event.dest_path)
+        
+        
+    # def on_modified(self, event):
+        # print(event)
+        # print(event.src_path)
+        # self.callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+
+def on_watched_new(to_watch_folder, watched_folder, hist_file, trigger):
+    print("in on_watched_new() -> ")
+    if os.path.exists(trigger) and os.path.samefile(trigger, hist_file):
+        for content in os.listdir(to_watch_folder):
+            folder_moved = False
+            movie_folder = os.path.join(to_watch_folder, content)
+            if not os.path.isdir(movie_folder):
+                continue
+            for file_ in os.listdir(movie_folder):
+                movie = os.path.join(movie_folder, file_)
+                if not os.path.isfile(movie):
+                    continue
+                if is_movie_watched(movie):
+                    print(f"Moving {movie_folder} to {watched_folder}")
+                    shutil.move(movie_folder, watched_folder)
+                    folder_moved = True
+                    break
+            if folder_moved:
+                continue
+    print("leaving on_watched_new() ->")
+            
 
 def get_new_movie_filename(file_path):
     """
@@ -52,11 +107,14 @@ def get_new_movie_filename(file_path):
 
 def is_movie_watched(movie_path):
     """
-    Returns True if movie at movie_path has been watched such that less than one minute remains.
+    Argument: path to movie to be checked
+    Return Value: Returns True if movie at movie_path has been watched such that less than one minute remains.
     (Checks VLC_HIST_FILE to get info about recently watched movies)
     Returns False if file isn't in recently watched files or if it's been watched for less
     than the entire length - 1 minute.
     """
+    if not os.path.isfile(movie_path):
+        return False
     file_paths = [os.path.realpath(urllib.parse.unquote(string[8:]))
                   for string in configur.get('RecentsMRL', 'list').split(", ")]
     if not os.path.realpath(movie_path) in file_paths:
@@ -70,8 +128,22 @@ def is_movie_watched(movie_path):
     runtime = frame_count / fps
     return runtime - watched_time <= 60
 
-print(is_movie_watched("a"))
+
+# print(is_movie_watched("a"))
 print(is_movie_watched(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
 # print(configur.get('RecentsMRL', 'times'))
 # print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
 # print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\El.Camino.A.Breaking.Bad.Movie.2019.1080p.WEBRip.x264-[YTS.LT].mp4'))
+new_watched_event_handler = WatchedHandler(on_watched_new, TO_WATCH_FOLDER, WATCHED_FOLDER, VLC_HIST_FILE)
+new_watched_observer = Observer()
+new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)
+new_watched_observer.start()
+print("Started observing-> " + VLC_HIST_FOLDER)
+
+try: 
+    while True:
+        time.sleep(10)
+        print('timer')
+except KeyboardInterrupt:
+    new_watched_observer.stop()
+    print("Stopped observing-> " + VLC_HIST_FOLDER)
