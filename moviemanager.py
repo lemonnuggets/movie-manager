@@ -14,15 +14,11 @@ A python script to manage your movies.
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon.
 
-"""
-Instead of using the vlc-qt-interface file changes to try and find if a movie has been watched,
-use the last file that vlc modifies/moves/closes to notice that vlc has just been closed and then
-ask the user if they have finished watching the most recent movie in RecentMRL, if the time watched is 0.
-"""
-
 import os
 import shutil
 import time
+import tkinter as tk
+from tkinter.messagebox import askokcancel, askretrycancel, showinfo
 from configparser import ConfigParser
 import urllib.parse
 import re
@@ -32,12 +28,15 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import subtitler
 
+PROG_NAME = "Movie Man"
+
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 dotenv.load_dotenv(dotenv_path)
 
 ROOT_MONITORED_PATH = os.path.realpath(os.getenv('ROOT_MONITORED_PATH'))
 VLC_HIST_FILE = os.path.realpath(os.getenv('VLC_HIST_FILE'))    # used to find the how much
                                                                 # of the video has already been played.
+VLC_ML_XSPF = os.path.realpath(os.getenv('VLC_ML_XSPF'))        # last file that vlc moves before
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
 VLC_HIST_FOLDER = os.path.realpath(os.getenv('VLC_HIST_FOLDER'))
@@ -56,20 +55,45 @@ class WatchedHandler(FileSystemEventHandler):
     def on_any_event(self, event):
         print("ANY EVENT ->",event)
     
-    def on_moved(self, event):
-        print("in on_moved() -> ")
-        self.callback(self.src_folder, self.dest_folder, self.file_to_track, event.dest_path)
-        
-        
-    # def on_modified(self, event):
-        # print(event)
-        # print(event.src_path)
-        # self.callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+    def on_modified(self, event):
+        print(event)
+        print(event.src_path)
+        self.callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
 
-def on_watched_new(to_watch_folder, watched_folder, hist_file, trigger):
-    print("in on_watched_new() -> ")
-    if os.path.exists(trigger) and os.path.samefile(trigger, hist_file):
-        for content in os.listdir(to_watch_folder):
+def ask_and_move(src_path, dest_path, message, success_message="Success!", retry_message="Retry?"):
+    """
+    Shows the user a pop up asking if they want to move src_path 
+    to dest_path. If user selects yes then src_path is moved to dest_path.
+    """
+    window = tk.Tk()
+
+    window.geometry(f"1x1+{round(window.winfo_screenwidth() / 2)}+{round(window.winfo_screenheight() / 2)}")
+    window.attributes('-topmost', True)
+    window.update()
+
+    answer = askokcancel(title=PROG_NAME, message=message, parent=window)
+    while answer:
+        try:
+            shutil.move(src_path, dest_path)
+            break
+        except:
+            answer = askretrycancel(title=PROG_NAME, message=retry_message, parent=window)
+            window.focus_set()
+        else:
+            showinfo(title=PROG_NAME, message=success_message, parent=window)
+            window.focus_set()
+    
+    window.destroy()
+            
+def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
+    """
+    Checks if modified event trigger was ml.xspf. If yes then finds movie in
+    to_watch_folder that returns true from is_movie_watched(), and calls ask_and_move
+    with the movie folder as source and the watched folder as destination.
+    """
+    if os.path.exists(trigger) and os.path.samefile(trigger, ml_xspf):
+        print('in on_vlc_closed() -> ')
+        for content in os.listdir(to_watch_folder):         
             folder_moved = False
             movie_folder = os.path.join(to_watch_folder, content)
             if not os.path.isdir(movie_folder):
@@ -78,16 +102,19 @@ def on_watched_new(to_watch_folder, watched_folder, hist_file, trigger):
                 movie = os.path.join(movie_folder, file_)
                 if not os.path.isfile(movie):
                     continue
+                print(f"Movie: {movie}; IsWatched: {is_movie_watched(movie)}")
                 if is_movie_watched(movie):
                     print(f"Moving {movie_folder} to {watched_folder}")
-                    shutil.move(movie_folder, watched_folder)
+                    ask_and_move(movie_folder, watched_folder,
+                                 message=f"Move {movie_folder} to {watched_folder}?",
+                                 success_message=f"Successfully moved {movie_folder} to {watched_folder}.",
+                                 retry_message=f"Unable to move folder. Retry?")
                     folder_moved = True
                     break
             if folder_moved:
                 continue
-    print("leaving on_watched_new() ->")
-            
-
+        print("leaving on_vlc_close() ->")
+        
 def get_new_movie_filename(file_path):
     """
     Argument: path to file that name is required for
@@ -126,7 +153,7 @@ def is_movie_watched(movie_path):
     fps = video.get(cv2.CAP_PROP_FPS)
     frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
     runtime = frame_count / fps
-    return runtime - watched_time <= 60
+    return runtime - watched_time <= 60 or watched_time == 0
 
 
 # print(is_movie_watched("a"))
@@ -134,7 +161,7 @@ print(is_movie_watched(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)
 # print(configur.get('RecentsMRL', 'times'))
 # print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
 # print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\El.Camino.A.Breaking.Bad.Movie.2019.1080p.WEBRip.x264-[YTS.LT].mp4'))
-new_watched_event_handler = WatchedHandler(on_watched_new, TO_WATCH_FOLDER, WATCHED_FOLDER, VLC_HIST_FILE)
+new_watched_event_handler = WatchedHandler(on_vlc_closed, TO_WATCH_FOLDER, WATCHED_FOLDER, VLC_ML_XSPF)
 new_watched_observer = Observer()
 new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)
 new_watched_observer.start()
