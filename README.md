@@ -25,3 +25,14 @@ Go to qBitTorrent > Tools > Options > Downloads and check "Copy .torrent files f
 [Watchdog](https://pypi.org/project/watchdog/)
 
 [Subliminal](https://pypi.org/project/subliminal/)
+
+# TODO
+
+- [X] Automatically move movie that user has watched from to-watch/ folder to watched/ folder
+
+- [ ] When movies are downloaded, check if subtitles are there. If not then download subtitles.
+
+- [ ] Automatically rename movies, folders and subtitles to a uniform format {Name of movie (<year of release>)}.ext}
+
+- [ ] When a .png file is added to the titlescreens folder automatically make it the directory icon of the appropriate movie.
+
