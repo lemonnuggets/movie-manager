@@ -1,4 +1,5 @@
 """
+movieman
 A python script to manage your movies.
 """
 # TODO: Find which videos have been watched in the to-watch/ folder
@@ -28,7 +29,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import subtitler
 
-PROG_NAME = "Movie Man"
+PROG_NAME = "movieman"
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 dotenv.load_dotenv(dotenv_path)
@@ -156,11 +157,7 @@ def is_movie_watched(movie_path):
     return runtime - watched_time <= 60 or watched_time == 0
 
 
-# print(is_movie_watched("a"))
 print(is_movie_watched(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
-# print(configur.get('RecentsMRL', 'times'))
-# print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
-# print(get_new_movie_filename(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\El.Camino.A.Breaking.Bad.Movie.2019.1080p.WEBRip.x264-[YTS.LT].mp4'))
 new_watched_event_handler = WatchedHandler(on_vlc_closed, TO_WATCH_FOLDER, WATCHED_FOLDER, VLC_ML_XSPF)
 new_watched_observer = Observer()
 new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)
