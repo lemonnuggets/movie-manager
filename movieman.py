@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 movieman
 A python script to manage your movies.
@@ -10,7 +11,12 @@ A python script to manage your movies.
 #
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon of the appropriate movie.
-
+"""
+Get qBitTorrent to dump torrent file in dump/ folder after torrent has finished download.
+Then use this dumped torrent as an indicator that a movie might have finished downloading.
+Try to find movie with same name as torrent and if thats not possible find subtitles and rename
+all movies in watched/ folder.
+"""
 import os
 import shutil
 import time
@@ -34,6 +40,7 @@ ROOT_MONITORED_PATH = os.path.realpath(os.getenv('ROOT_MONITORED_PATH'))
 VLC_HIST_FILE = os.path.realpath(os.getenv('VLC_HIST_FILE'))    # used to find the how much
                                                                 # of the video has already been played.
 VLC_ML_XSPF = os.path.realpath(os.getenv('VLC_ML_XSPF'))        # last file that vlc moves before
+QBITTORRENT = os.path.realpath(os.getenv('QBITTORRENT'))
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
 VLC_HIST_FOLDER = os.path.realpath(os.getenv('VLC_HIST_FOLDER'))
@@ -42,30 +49,41 @@ print(ROOT_MONITORED_PATH, VLC_HIST_FILE, WATCHED_FOLDER, TO_WATCH_FOLDER, VLC_H
 configur = ConfigParser(interpolation=None)
 configur.read(VLC_HIST_FILE)
 
-class WatchedHandler(FileSystemEventHandler):
-    def __init__(self, callback, src_folder=None, dest_folder=None, file_to_track=None):
+class MovieHandler(FileSystemEventHandler):
+    def __init__(self, on_moved_callback=None, on_modified_callback=None, on_created_callback=None,
+                 src_folder=None, dest_folder=None, file_to_track=None, folder_to_track=None):
         self.src_folder = src_folder
         self.dest_folder = dest_folder
-        self.callback = callback
+        self.on_moved_callback = on_moved_callback
+        self.on_created_callback = on_created_callback
+        self.on_modified_callback = on_modified_callback
         self.file_to_track = file_to_track
-    
+        self.folder_to_track = folder_to_track
+
     def on_any_event(self, event):
         print("ANY EVENT ->",event)
-    
+
+    def on_created(self, event):
+        if self.on_created_callback:
+            self.on_created_callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+
     def on_modified(self, event):
-        print(event)
-        print(event.src_path)
-        self.callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+        if self.on_modified_callback:
+            self.on_modified_callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+
+    def on_moved(self, event):
+        if self.on_moved_callback:
+            self.on_moved_callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
 
 def ask_and_move(src_path, dest_path, message, success_message="Success!", retry_message="Retry?"):
     """
-    Shows the user a pop up asking if they want to move src_path 
+    Shows the user a pop up asking if they want to move src_path
     to dest_path. If user selects yes then src_path is moved to dest_path.
     """
     window = tk.Tk()
 
-    window.geometry(f"1x1+{round(window.winfo_screenwidth() / 2)}+{round(window.winfo_screenheight() / 2)}")
-    window.attributes('-topmost', True)
+    window.geometry(f"1x1+{round(window.winfo_screenwidth() / 2)}+{round(window.winfo_screenheight() / 2)}") # center window
+    window.attributes('-topmost', True) # Open window on top of all other windows
     window.update()
 
     answer = askokcancel(title=PROG_NAME, message=message, parent=window)
@@ -153,12 +171,17 @@ def is_movie_watched(movie_path):
     return runtime - watched_time <= 60 or watched_time == 0
 
 
-print(is_movie_watched(r'C:\Users\adamj\Videos\.MOVIES\to-watch\First Cow (2019)\First Cow (2019).mp4'))
-new_watched_event_handler = WatchedHandler(on_vlc_closed, TO_WATCH_FOLDER, WATCHED_FOLDER, VLC_ML_XSPF)
-new_watched_observer = Observer()
-new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)
-new_watched_observer.start()
-print("Started observing-> " + VLC_HIST_FOLDER)
+new_watched_event_handler = MovieHandler(on_modified_callback=on_vlc_closed, src_folder=TO_WATCH_FOLDER,
+                                         dest_folder=WATCHED_FOLDER, file_to_track=VLC_ML_XSPF)
+new_watched_observer = Observer()                                           # monitoring VLC_HIST_FOLDER 
+new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)   # To detect when vlc is closed and
+new_watched_observer.start()                                                # which movies were recently watched.
+print("Started observing-> " + VLC_HIST_FOLDER)                             
+new_movie_event_handler = MovieHandler()
+new_movie_observer = Observer()
+new_movie_observer.schedule(new_movie_event_handler, QBITTORRENT)
+new_movie_observer.start()
+print("Started observing-> " + QBITTORRENT)
 
 try: 
     while True:
@@ -167,3 +190,4 @@ try:
 except KeyboardInterrupt:
     new_watched_observer.stop()
     print("Stopped observing-> " + VLC_HIST_FOLDER)
+    print("Stopped observing-> " + QBITTORRENT)
