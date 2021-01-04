@@ -2,10 +2,6 @@
 movieman
 A python script to manage your movies.
 """
-# TODO: Find which videos have been watched in the to-watch/ folder
-# and move them to the watched/ folder. (check whenever VLC_HIST_FILE
-# is changed).
-#
 # TODO: When movies are downloaded, check if subtitles are there. If not
 # then download subtitles.
 #
@@ -13,7 +9,7 @@ A python script to manage your movies.
 # {Name of movie (<year of release>)}.ext
 #
 # TODO: When a .png file is added to the titlescreens folder automatically make
-# it the directory icon.
+# it the directory icon of the appropriate movie.
 
 import os
 import shutil
@@ -27,7 +23,7 @@ import dotenv
 import cv2
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-import subtitler
+import substuff
 
 PROG_NAME = "movieman"
 
