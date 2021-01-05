@@ -24,6 +24,7 @@ import subprocess
 from subliminal import save_subtitles, scan_video, region, download_best_subtitles
 from babelfish import Language
 
+WDIR = ""
 
 def get_mkv_track_id(file_path):
     """ Returns the track ID of the SRT subtitles track"""
@@ -99,7 +100,7 @@ def main(argv):
         os.makedirs(cache_dir)
     cache_file = os.path.join(cache_dir, 'subliminal.cachefile.dbm')
     # configure the cache
-    region.configure('dogpile.cache.dbm', arguments={'filename': cache_file})
+    region.configure('dogpile.cache.dbm', arguments={'filename': cache_file}, replace_existing_backend=True)
     file_list = []
     for root, dirs, files in os.walk(WDIR):
         for name in files:

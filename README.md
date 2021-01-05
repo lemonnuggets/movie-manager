@@ -2,10 +2,14 @@
 
 *WIP*
 
-A python script that runs at startup to manage your movie folder.
+A python script that runs at startup to manage your movie folder. (Only tested on Windows)
 # Prerequisites
 
 [MKVToolNix](https://mkvtoolnix.download/downloads.html#windows)
+
+[VLC Media Player](https://www.videolan.org/vlc/)
+
+[QBitTorrent](https://www.qbittorrent.org/download.php)
 
 # Instructions
 
@@ -23,19 +27,17 @@ Go to qBitTorrent > Tools > Options > Downloads and check "Copy .torrent files f
 
 [Jorti's extract-subs](https://github.com/jorti/extract-subs)
 
-[Python OpenCV2](https://pypi.org/project/opencv-python/)
+[Subliminal](https://pypi.org/project/subliminal/)
 
 [Watchdog](https://pypi.org/project/watchdog/)
-
-[Subliminal](https://pypi.org/project/subliminal/)
 
 # TODO
 
 - [X] Automatically move movie that user has watched from to-watch/ folder to watched/ folder
 
-- [ ] When movies are downloaded, check if subtitles are there. If not then download subtitles.
+- [X] When movies are downloaded, check if subtitles are there. If not then download subtitles.
 
-- [ ] Automatically rename movies, folders and subtitles to a uniform format {Name of movie (<year of release>)}.ext}
+- [X] Automatically rename movies, folders and subtitles to a uniform format {Name of movie (<year of release>)}.ext}
 
 - [ ] When a .png file is added to the titlescreens folder automatically make it the directory icon of the appropriate movie.
 
