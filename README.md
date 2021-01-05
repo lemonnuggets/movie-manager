@@ -9,8 +9,11 @@ A python script that to manage your movie folder. (Only tested on Windows)
 - Automatically download subtitles for movies using Subliminal.
 
 - Automatically rename your movie folder, movie file and subtitle file so that instead of having a name like this
+
         Another.Round.2020.720p.WEBRip.800MB.x264-GalaxyRG\[TGx]
+
   the name will be like this
+  
         Another Round (2020)
 
 ## Prerequisites
