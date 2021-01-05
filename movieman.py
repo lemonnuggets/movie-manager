@@ -295,7 +295,6 @@ print("Started observing-> " + DUMP_PATH)
 try:
     while True:
         time.sleep(10)
-        print('timer')
 except KeyboardInterrupt:
     new_watched_observer.stop()
     print("Stopped observing-> " + VLC_HIST_FOLDER)
