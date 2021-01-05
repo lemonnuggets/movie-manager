@@ -12,10 +12,10 @@ from configparser import ConfigParser
 import urllib.parse
 import re
 import dotenv
-import cv2
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import substuff
+# import cv2
 
 # TODO: When movies are downloaded, check if subtitles are there. If not
 # then download subtitles.
@@ -74,8 +74,7 @@ class MovieHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if self.on_modified_callback:
-            self.on_modified_callback(self.src_folder, self.dest_folder,
-                                      self.file_to_track, event.src_path)
+            self.on_modified_callback(event.src_path)
 
     def on_moved(self, event):
         if self.on_moved_callback:
@@ -99,12 +98,12 @@ def is_movie_watched(movie_path):
         return False
     times = [time for time in configur.get('RecentsMRL', 'times').split(', ')]
     watched_time = int(times[file_paths.index(movie_path)]) / 1000
-
-    video = cv2.VideoCapture(movie_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    runtime = frame_count / fps
-    return runtime - watched_time <= 60 or watched_time == 0
+    # video = cv2.VideoCapture(movie_path)
+    # fps = video.get(cv2.CAP_PROP_FPS)
+    # frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    # runtime = frame_count / fps
+    # return runtime - watched_time <= 60 or watched_time == 0
+    return watched_time == 0
 
 def ask_and_move(src_path, dest_path, message, success_message="Success!", retry_message="Retry?"):
     """
@@ -202,6 +201,9 @@ def clear_except(dir_, needed_file):
     return 1
 
 def rename_dir_and_contents(dir_):
+    """
+    Rename movie folder(dir_), movie file and subtitle file.
+    """
     old_name = os.path.basename(dir_)
     new_name = get_new_movie_filename(dir_)
     if old_name == new_name:
@@ -213,6 +215,9 @@ def rename_dir_and_contents(dir_):
             os.rename(file_, os.path.join(os.path.dirname(file_), new_name + extension))
 
 def sub_and_rename(dir_path):
+    """
+    Get subtitle files and rename movie folder.
+    """
     substuff.main(['substuff.py', dir_path])
     rename_dir_and_contents(dir_path)
 

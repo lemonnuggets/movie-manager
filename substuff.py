@@ -33,7 +33,7 @@ def get_mkv_track_id(file_path):
     except subprocess.CalledProcessError as ex:
         print(ex)
         sys.exit(1)
-    pattern = re.compile('.* (\d+): subtitles \(SubRip/SRT\).*', re.DOTALL)
+    pattern = re.compile(r'.* (\d+): subtitles \(SubRip/SRT\).*', re.DOTALL)
     m = pattern.match(str(raw_info))
     if m:
         return raw_info, m.group(1)
