@@ -13,7 +13,7 @@ A python script that to manage your movie folder. (Only tested on Windows)
         Another.Round.2020.720p.WEBRip.800MB.x264-GalaxyRG[TGx]
 
   the name will be like this
-  
+
         Another Round (2020)
 
 ## Prerequisites
