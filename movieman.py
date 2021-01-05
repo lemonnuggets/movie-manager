@@ -23,12 +23,11 @@ PROG_NAME = "movieman"
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 dotenv.load_dotenv(dotenv_path)
+VLC_HIST_FOLDER = os.path.realpath(os.getenv('VLC_HIST_FOLDER'))            # used to find the how much
+VLC_HIST_FILE = os.path.join(VLC_HIST_FOLDER, 'vlc-qt-interface.ini')       # of the video has already been played.
+VLC_ML_XSPF = os.path.join(VLC_HIST_FOLDER, 'ml.xspf')                      # last file that vlc moves before
 
-VLC_HIST_FILE = os.path.realpath(os.getenv('VLC_HIST_FILE'))    # used to find the how much
-VLC_HIST_FOLDER = os.path.realpath(os.getenv('VLC_HIST_FOLDER'))# of the video has already been played.
-VLC_ML_XSPF = os.path.realpath(os.getenv('VLC_ML_XSPF'))        # last file that vlc moves before
-
-DUMP_PATH = os.path.realpath(os.getenv('DUMP_PATH'))            # Folder for finished torrents.
+DUMP_PATH = os.path.realpath(os.getenv('DUMP_PATH'))                        # Folder for finished torrents.
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
 
