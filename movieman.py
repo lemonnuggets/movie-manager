@@ -3,20 +3,6 @@
 movieman
 A python script to manage your movies.
 """
-# TODO: When movies are downloaded, check if subtitles are there. If not
-# then download subtitles.
-#
-# TODO: Automatically rename movies, folders and subtitles to a uniform format
-# {Name of movie (<year of release>)}.ext
-#
-# TODO: When a .png file is added to the titlescreens folder automatically make
-# it the directory icon of the appropriate movie.
-"""
-Get qBitTorrent to dump torrent file in dump/ folder after torrent has finished download.
-Then use this dumped torrent as an indicator that a movie might have finished downloading.
-Try to find movie with same name as torrent and if thats not possible find subtitles and rename
-all movies in watched/ folder.
-"""
 import os
 import shutil
 import time
@@ -31,6 +17,21 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import substuff
 
+# TODO: When movies are downloaded, check if subtitles are there. If not
+# then download subtitles.
+#
+# TODO: Automatically rename movies, folders and subtitles to a uniform format
+# {Name of movie (<year of release>)}.ext
+#
+# TODO: When a .png file is added to the titlescreens folder automatically make
+# it the directory icon of the appropriate movie.
+"""
+Get qBitTorrent to dump torrent file in dump/ folder after torrent has finished download.
+Then use this dumped torrent as an indicator that a movie might have finished downloading.
+Try to find movie with same name as torrent and if thats not possible find subtitles and rename
+all movies in watched/ folder.
+"""
+
 PROG_NAME = "movieman"
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -41,10 +42,13 @@ VLC_HIST_FILE = os.path.realpath(os.getenv('VLC_HIST_FILE'))    # used to find t
                                                                 # of the video has already been played.
 VLC_ML_XSPF = os.path.realpath(os.getenv('VLC_ML_XSPF'))        # last file that vlc moves before
 QBITTORRENT = os.path.realpath(os.getenv('QBITTORRENT'))
+DUMP_PATH = os.path.realpath(os.getenv('DUMP_PATH'))
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
 VLC_HIST_FOLDER = os.path.realpath(os.getenv('VLC_HIST_FOLDER'))
-print(ROOT_MONITORED_PATH, VLC_HIST_FILE, WATCHED_FOLDER, TO_WATCH_FOLDER, VLC_HIST_FOLDER)
+
+MOV_EXTENSIONS = ('.mkv', '.mp4', '.avi', '.mpg', '.mpeg')
+SUB_EXTENSIONS = ('.srt', '.scc', '.vtt', '.ttml', '.aaf')
 
 configur = ConfigParser(interpolation=None)
 configur.read(VLC_HIST_FILE)
@@ -65,15 +69,42 @@ class MovieHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         if self.on_created_callback:
-            self.on_created_callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+            self.on_created_callback(self.src_folder, self.dest_folder,
+                                     self.file_to_track, event.src_path)
 
     def on_modified(self, event):
         if self.on_modified_callback:
-            self.on_modified_callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+            self.on_modified_callback(self.src_folder, self.dest_folder,
+                                      self.file_to_track, event.src_path)
 
     def on_moved(self, event):
         if self.on_moved_callback:
-            self.on_moved_callback(self.src_folder, self.dest_folder, self.file_to_track, event.src_path)
+            self.on_moved_callback(self.src_folder, self.dest_folder,
+                                   self.file_to_track, event.src_path)
+
+def is_movie_watched(movie_path):
+    """
+    Argument: path to movie to be checked
+    Return Value: Returns True if movie at movie_path has been watched such that
+    less than one minute remains. (Checks VLC_HIST_FILE to get info about recently
+    watched movies).
+    Returns False if file isn't in recently watched files or if it's been watched
+    for less than the entire length - 1 minute.
+    """
+    if not os.path.isfile(movie_path):
+        return False
+    file_paths = [os.path.realpath(urllib.parse.unquote(string[8:]))
+                  for string in configur.get('RecentsMRL', 'list').split(", ")]
+    if not os.path.realpath(movie_path) in file_paths:
+        return False
+    times = [time for time in configur.get('RecentsMRL', 'times').split(', ')]
+    watched_time = int(times[file_paths.index(movie_path)]) / 1000
+
+    video = cv2.VideoCapture(movie_path)
+    fps = video.get(cv2.CAP_PROP_FPS)
+    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    runtime = frame_count / fps
+    return runtime - watched_time <= 60 or watched_time == 0
 
 def ask_and_move(src_path, dest_path, message, success_message="Success!", retry_message="Retry?"):
     """
@@ -97,9 +128,8 @@ def ask_and_move(src_path, dest_path, message, success_message="Success!", retry
         else:
             showinfo(title=PROG_NAME, message=success_message, parent=window)
             window.focus_set()
-    
     window.destroy()
-            
+
 def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
     """
     Checks if modified event trigger was ml.xspf. If yes then finds movie in
@@ -108,7 +138,7 @@ def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
     """
     if os.path.exists(trigger) and os.path.samefile(trigger, ml_xspf):
         print('in on_vlc_closed() -> ')
-        for content in os.listdir(to_watch_folder):         
+        for content in os.listdir(to_watch_folder):
             folder_moved = False
             movie_folder = os.path.join(to_watch_folder, content)
             if not os.path.isdir(movie_folder):
@@ -123,19 +153,22 @@ def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
                     ask_and_move(movie_folder, watched_folder,
                                  message=f"Move {movie_folder} to {watched_folder}?",
                                  success_message=f"Successfully moved {movie_folder} to {watched_folder}.",
-                                 retry_message=f"Unable to move folder. Retry?")
+                                 retry_message="Unable to move folder. Retry?")
                     folder_moved = True
                     break
             if folder_moved:
                 continue
         print("leaving on_vlc_close() ->")
-        
-def get_new_movie_filename(file_path):
+
+def get_new_movie_filename(path):
     """
-    Argument: path to file that name is required for
-    Return Value: New file path with name in correct format
+    Argument: path to file/dir that name is required for
+    Return Value: New file/dir name (extension not included for file)
     """
-    file_name = os.path.splitext(os.path.basename(os.path.realpath(file_path)))[0]
+    if os.path.isfile(path):
+        file_name = os.path.splitext(os.path.basename(os.path.realpath(path)))[0]
+    else:
+        file_name = os.path.basename(path)
     new_file_name = re.sub(r"\.", " ", file_name)
     new_file_name = re.sub(r"\(|\)|\[|\]|\{|\}", "", new_file_name)
     match_from_beginning = re.search(r"(.*)\b(18|19|20\d{2})\b", new_file_name) # doing it this way will make it so that
@@ -147,47 +180,81 @@ def get_new_movie_filename(file_path):
     new_file_name = f"{name}({year})"
     return new_file_name
 
-def is_movie_watched(movie_path):
+def clear_except(dir_, needed_file):
     """
-    Argument: path to movie to be checked
-    Return Value: Returns True if movie at movie_path has been watched such that less than one minute remains.
-    (Checks VLC_HIST_FILE to get info about recently watched movies)
-    Returns False if file isn't in recently watched files or if it's been watched for less
-    than the entire length - 1 minute.
+    Arguments:
+    Dir_: Directory to delete files from
+    needed_file: File to be ignored
+    ReturnValue:
+    0 if dir_ or needed_file isn't a proper directory
+    and file respectively.
+    1 otherwise
     """
-    if not os.path.isfile(movie_path):
-        return False
-    file_paths = [os.path.realpath(urllib.parse.unquote(string[8:]))
-                  for string in configur.get('RecentsMRL', 'list').split(", ")]
-    if not os.path.realpath(movie_path) in file_paths:
-        return False
-    times = [time for time in configur.get('RecentsMRL', 'times').split(', ')]
-    watched_time = int(times[file_paths.index(movie_path)]) / 1000
+    if not os.path.isdir(dir_):
+        print(f"{dir_} isn't a valid directory.")
+        return 0
+    if not os.path.isfile(needed_file):
+        print(f"{needed_file} doesn't exist.")
+        return 0
+    for file_ in os.listdir(dir_):
+        if not os.path.samefile(needed_file, file_):
+            os.remove(file_)
+    return 1
 
-    video = cv2.VideoCapture(movie_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    runtime = frame_count / fps
-    return runtime - watched_time <= 60 or watched_time == 0
+def rename_dir_and_contents(dir_):
+    old_name = os.path.basename(dir_)
+    new_name = get_new_movie_filename(dir_)
+    if old_name == new_name:
+        return 0
+    os.rename(dir_, os.path.join(os.path.dirname(dir_), new_name))
+    for file_ in os.walk(dir_):
+        extension = os.path.splitext(file_)[1]
+        if extension in (*MOV_EXTENSIONS, *SUB_EXTENSIONS):
+            os.rename(file_, os.path.join(os.path.dirname(file_), new_name + extension))
 
+def sub_and_rename(dir_path):
+    substuff.main(['substuff.py', dir_path])
+    rename_dir_and_contents(dir_path)
+
+def on_torrent_finished(torrent):
+    """
+    Runs when torrent file is modified in DUMP_PATH. Clears all other files
+    in the DUMP_PATH.
+    Since torrent file is added to the folder on torrent completion,
+    this means that some torrent finished downloading. Therefore it looks
+    for this new movie folder and if it doesnt't have the same name as the
+    torrent file, then it checks if there are any folders that need to be renamed,
+    and renames them.
+    """
+    clear_except(DUMP_PATH, torrent)
+    old_name = os.path.splitext(os.path.basename(torrent))[0]
+    dir_path_1 = os.path.join(TO_WATCH_FOLDER, old_name)
+    dir_path_2 = os.path.join(WATCHED_FOLDER, old_name)
+    if os.path.isdir(dir_path_1):
+        sub_and_rename(dir_path_1)
+    elif os.path.isdir(dir_path_2):
+        sub_and_rename(dir_path_2)
+    else:
+        for dir_ in os.listdir(TO_WATCH_FOLDER) + os.listdir(WATCHED_FOLDER):
+            sub_and_rename(dir_)
 
 new_watched_event_handler = MovieHandler(on_modified_callback=on_vlc_closed, src_folder=TO_WATCH_FOLDER,
                                          dest_folder=WATCHED_FOLDER, file_to_track=VLC_ML_XSPF)
-new_watched_observer = Observer()                                           # monitoring VLC_HIST_FOLDER 
+new_watched_observer = Observer()                                           # monitoring VLC_HIST_FOLDER
 new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)   # To detect when vlc is closed and
 new_watched_observer.start()                                                # which movies were recently watched.
-print("Started observing-> " + VLC_HIST_FOLDER)                             
+print("Started observing-> " + VLC_HIST_FOLDER)
 new_movie_event_handler = MovieHandler()
 new_movie_observer = Observer()
-new_movie_observer.schedule(new_movie_event_handler, QBITTORRENT)
+new_movie_observer.schedule(new_movie_event_handler, DUMP_PATH)
 new_movie_observer.start()
-print("Started observing-> " + QBITTORRENT)
+print("Started observing-> " + DUMP_PATH)
 
-try: 
+try:
     while True:
         time.sleep(10)
         print('timer')
 except KeyboardInterrupt:
     new_watched_observer.stop()
     print("Stopped observing-> " + VLC_HIST_FOLDER)
-    print("Stopped observing-> " + QBITTORRENT)
+    print("Stopped observing-> " + DUMP_PATH)

@@ -3,6 +3,9 @@
 *WIP*
 
 A python script that runs at startup to manage your movie folder.
+# Prerequisites
+
+[MKVToolNix](https://mkvtoolnix.download/downloads.html#windows)
 
 # Instructions
 
@@ -11,7 +14,7 @@ A python script that runs at startup to manage your movie folder.
         git clone https://www.github.com/lemonnuggets/movieman.git
         cd movieman
         pip install -r requirements.txt
-    
+
     Make movieman.py run at start up.
 
     Go to qBitTorrent > Tools > Options > Downloads and check "Copy .torrent files for finished downloads to" and set the destination folder to same path as DUMP_PATH from your .env file.
