@@ -11,10 +11,16 @@ from tkinter.messagebox import askokcancel, askretrycancel
 from configparser import ConfigParser
 import urllib.parse
 import re
+import logging
+from logging.handlers import RotatingFileHandler
 import dotenv
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import substuff
+
+# FIXME: Authentication with subliminal
+
+# TODO: Test file by running it as usual.
 
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon of the appropriate movie.
@@ -36,32 +42,35 @@ SUB_EXTENSIONS = ('.srt', '.scc', '.vtt', '.ttml', '.aaf')
 
 configur = ConfigParser(interpolation=None)
 configur.read(VLC_HIST_FILE)
+if not os.path.isdir('./logs'):
+    os.makedirs('./logs')
+logging.basicConfig(handlers=[RotatingFileHandler('./logs/my_log.log',
+                                                  maxBytes=100000, backupCount=10)],
+                    level=logging.INFO,
+                    format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                    datefmt='%Y-%m-%dT%H:%M:%S')
 
 class MovieHandler(FileSystemEventHandler):
     """
     Handler to watch for required events regarding the movie files.
     """
-    def __init__(self, on_moved_callback=None, on_modified_callback=None, on_created_callback=None,
-                 src_folder=None, dest_folder=None, file_to_track=None, folder_to_track=None):
+    def __init__(self, on_modified_callback=None, src_folder=None,
+                 dest_folder=None, file_to_track=None, folder_to_track=None):
         self.src_folder = src_folder
         self.dest_folder = dest_folder
-        self.on_moved_callback = on_moved_callback
-        self.on_created_callback = on_created_callback
         self.on_modified_callback = on_modified_callback
         self.file_to_track = file_to_track
         self.folder_to_track = folder_to_track
 
     def on_any_event(self, event):
-        print("ANY EVENT ->",event)
+        logging.info(f"ANY EVENT -> {event}")
 
     def on_modified(self, event):
-        if self.on_modified_callback:
+        if self.on_modified_callback and self.src_folder and self.dest_folder and self.file_to_track:
+            self.on_modified_callback(self.src_folder, self.dest_folder,
+                                      self.file_to_track, event.src_path)
+        else:
             self.on_modified_callback(event.src_path)
-
-    def on_moved(self, event):
-        if self.on_moved_callback:
-            self.on_moved_callback(self.src_folder, self.dest_folder,
-                                   self.file_to_track, event.src_path)
 
 def is_movie_watched(movie_path):
     """
@@ -72,6 +81,7 @@ def is_movie_watched(movie_path):
     Returns False if file isn't in recently watched files or if it's been watched
     for less than the entire length - 1 minute.
     """
+    logging.info(f"in is_movie_watched({movie_path}) ->")
     if not os.path.isfile(movie_path):
         return False
     file_paths = [os.path.realpath(urllib.parse.unquote(string[8:]))
@@ -80,6 +90,7 @@ def is_movie_watched(movie_path):
         return False
     times = [time for time in configur.get('RecentsMRL', 'times').split(', ')]
     watched_time = int(times[file_paths.index(movie_path)]) / 1000
+    logging.info(f"leaving is_movie_watched({movie_path}) ->")
     return watched_time == 0
 
 def ask_and_move(src_path, dest_path, message, success_message="Success!", retry_message="Retry?"):
@@ -87,6 +98,7 @@ def ask_and_move(src_path, dest_path, message, success_message="Success!", retry
     Shows the user a pop up asking if they want to move src_path
     to dest_path. If user selects yes then src_path is moved to dest_path.
     """
+    logging.info(f"in ask_and_move({src_path}, {dest_path}, {message}, {success_message}, {retry_message}) ->")
     window = tk.Tk()
 
     window.geometry(f"1x1+{round(window.winfo_screenwidth() / 2)}+{round(window.winfo_screenheight() / 2)}") # center window
@@ -98,9 +110,11 @@ def ask_and_move(src_path, dest_path, message, success_message="Success!", retry
         try:
             shutil.move(src_path, dest_path)
             break
-        except:
+        except Exception as err:
+            logging.error(err)
             answer = askretrycancel(title=PROG_NAME, message=retry_message, parent=window)
             window.focus_set()
+    logging.info(f"leaving ask_and_move({src_path}, {dest_path}, {message}, {success_message}, {retry_message}) ->")
     window.destroy()
 
 def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
@@ -110,7 +124,7 @@ def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
     with the movie folder as source and the watched folder as destination.
     """
     if os.path.exists(trigger) and os.path.samefile(trigger, ml_xspf):
-        print('in on_vlc_closed() -> ')
+        logging.info('in on_vlc_closed() -> ')
         for content in os.listdir(to_watch_folder):
             folder_moved = False
             movie_folder = os.path.join(to_watch_folder, content)
@@ -120,9 +134,9 @@ def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
                 movie = os.path.join(movie_folder, file_)
                 if not os.path.isfile(movie):
                     continue
-                print(f"Movie: {movie}; IsWatched: {is_movie_watched(movie)}")
+                logging.info(f"Movie: {movie}; IsWatched: {is_movie_watched(movie)}")
                 if is_movie_watched(movie):
-                    print(f"Moving {movie_folder} to {watched_folder}")
+                    logging.info(f"Moving {movie_folder} to {watched_folder}")
                     ask_and_move(movie_folder, watched_folder,
                                  message=f"Move {movie_folder} to {watched_folder}?",
                                  success_message=f"Successfully moved {movie_folder} to {watched_folder}.",
@@ -131,7 +145,7 @@ def on_vlc_closed(to_watch_folder, watched_folder, ml_xspf, trigger):
                     break
             if folder_moved:
                 continue
-        print("leaving on_vlc_close() ->")
+        logging.info("leaving on_vlc_close() ->")
 
 def get_new_movie_filename(path):
     """
@@ -163,6 +177,7 @@ def ask_and_rename(to_be_renamed):
     Shows the user a pop up asking if they want to rename the
     files/dirs in to_be_named.
     """
+    logging.info(f"in ask_and_rename({to_be_renamed}) ->")
     message = ["Do you want to:-"]
     for (old_path, new_path) in to_be_renamed:
         message.append(f"Rename {old_path} to {new_path}")
@@ -171,26 +186,28 @@ def ask_and_rename(to_be_renamed):
     retry_message = "Unable to rename files. Want to try again?"
 
     window = tk.Tk()
-    print("Message = ", message)
+    logging.info(f"Message = {message}")
 
     window.geometry(f"1x1+{round(window.winfo_screenwidth() / 2)}+{round(window.winfo_screenheight() / 2)}") # center window
     window.attributes('-topmost', True) # Open window on top of all other windows
     window.update()
 
     answer = askokcancel(title=PROG_NAME, message=message, parent=window)
-    print("Answer = ", answer)
+    logging.info(f"Answer = {answer}")
     success = False
     while answer:
         try:
             for (old_path, new_path) in to_be_renamed:
-                print(f"Old path = {old_path}; New Path = {new_path}")
+                logging.info(f"Old path = {old_path}; New Path = {new_path}")
                 os.rename(old_path, new_path)
             success = True
             break
-        except:
+        except Exception as err:
+            logging.error(err)
             answer = askretrycancel(title=PROG_NAME, message=retry_message, parent=window)
             window.focus_set()
     window.destroy()
+    logging.info(f"leaving ask_and_rename({to_be_renamed}) ->")
     return success
 
 def clear_except(dir_, needed_file):
@@ -203,27 +220,30 @@ def clear_except(dir_, needed_file):
     and file respectively.
     1 otherwise
     """
-    print(f"in clear_except({dir_}, {needed_file}) -> ")
+    logging.info(f"in clear_except({dir_}, {needed_file}) ->")
     if not os.path.isdir(dir_):
-        print(f"{dir_} isn't a valid directory.")
+        logging.error(f"{dir_} isn't a valid directory.")
         return 0
     if not os.path.isfile(needed_file):
-        print(f"{needed_file} doesn't exist.")
+        logging.error(f"{needed_file} doesn't exist.")
         return 0
     for file_ in os.listdir(dir_):
         path = os.path.join(dir_, file_)
-        print(f"Checking {path}")
+        logging.info(f"Checking {path}")
         if not os.path.samefile(needed_file, path):
-            print(f"Removing {path}")
-            os.remove(path)
-    print(f"leaving clear_except({dir_}, {needed_file}) -> ")
+            try:
+                logging.info(f"Removing {path}")
+                os.remove(path)
+            except Exception as err:
+                logging.error(err)
+    logging.info(f"leaving clear_except({dir_}, {needed_file}) ->")
     return 1
 
 def rename_dir_and_contents(dir_):
     """
     Rename movie folder(dir_), movie file and subtitle file.
     """
-    print(f"in rename_dir_and_contents({dir_}) -> ")
+    logging.info(f"in rename_dir_and_contents({dir_}) ->")
     old_name = os.path.basename(dir_)
     new_name = get_new_movie_filename(dir_)
     if new_name == None or old_name == new_name:
@@ -238,23 +258,23 @@ def rename_dir_and_contents(dir_):
     for root, dirs, files in os.walk(dir_):
         for name in files:
             file_ = os.path.join(root, name)
-            print("FILE: ", file_)
+            logging.info(f"FILE: {file_}")
             extension = os.path.splitext(file_)[1]
             if extension in (*MOV_EXTENSIONS, *SUB_EXTENSIONS):
                 to_be_renamed.append((file_, os.path.join(os.path.dirname(file_), new_name + extension)))
-    print(f"Asking to rename:- {to_be_renamed}")
+    logging.info(f"Asking to rename:- {to_be_renamed}")
     success = ask_and_rename(to_be_renamed)
-    print(f"leaving rename_dir_and_contents({dir_}) -> ")
+    logging.info(f"leaving rename_dir_and_contents({dir_}) ->")
     return success
 
 def sub_and_rename(dir_path):
     """
     Get subtitle files and rename movie folder.
     """
-    print(f"in sub_and_rename({dir_path})->")
+    logging.info(f"in sub_and_rename({dir_path})->")
     substuff.main(['substuff.py', dir_path])
     rename_dir_and_contents(dir_path)
-    print(f"leaving sub_and_rename({dir_path})->")
+    logging.info(f"leaving sub_and_rename({dir_path})->")
 
 def on_torrent_finished(torrent):
     """
@@ -266,6 +286,7 @@ def on_torrent_finished(torrent):
     torrent file, then it checks if there are any folders that need to be renamed,
     and renames them.
     """
+    logging.info(f"in on_torrent_finished({torrent}) ->")
     clear_except(DUMP_PATH, torrent)
     old_name = os.path.splitext(os.path.basename(torrent))[0]
     dir_path_1 = os.path.join(TO_WATCH_FOLDER, old_name)
@@ -279,23 +300,39 @@ def on_torrent_finished(torrent):
             sub_and_rename(os.path.join(TO_WATCH_FOLDER, dir_))
         for dir_ in os.listdir(WATCHED_FOLDER):
             sub_and_rename(os.path.join(WATCHED_FOLDER, dir_))
+    logging.info(f"leaving on_torrent_finished({torrent}) ->")
+
+def show_script_started():
+    """
+    Initial pop-up to show that script is running
+    """
+    window = tk.Tk()
+
+    window.geometry(f"1x1+{round(window.winfo_screenwidth() / 2)}+{round(window.winfo_screenheight() / 2)}") # center window
+    window.attributes('-topmost', True) # Open window on top of all other windows
+    window.update()
+    message = "MOVIEMAN IS NOW RUNNING..."
+
+    answer = askokcancel(title=PROG_NAME, message=message, parent=window)
+    window.destroy()
 
 new_watched_event_handler = MovieHandler(on_modified_callback=on_vlc_closed, src_folder=TO_WATCH_FOLDER,
                                          dest_folder=WATCHED_FOLDER, file_to_track=VLC_ML_XSPF)
 new_watched_observer = Observer()                                           # monitoring VLC_HIST_FOLDER
 new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)   # To detect when vlc is closed and
 new_watched_observer.start()                                                # which movies were recently watched.
-print("Started observing-> " + VLC_HIST_FOLDER)
+logging.info("Started observing->" + VLC_HIST_FOLDER)
 new_movie_event_handler = MovieHandler(on_modified_callback=on_torrent_finished)
 new_movie_observer = Observer()
 new_movie_observer.schedule(new_movie_event_handler, DUMP_PATH)
 new_movie_observer.start()
-print("Started observing-> " + DUMP_PATH)
+logging.info("Started observing->" + DUMP_PATH)
 
 try:
+    show_script_started()
     while True:
         time.sleep(10)
 except KeyboardInterrupt:
     new_watched_observer.stop()
-    print("Stopped observing-> " + VLC_HIST_FOLDER)
-    print("Stopped observing-> " + DUMP_PATH)
+    logging.info("Stopped observing->" + VLC_HIST_FOLDER)
+    logging.info("Stopped observing->" + DUMP_PATH)

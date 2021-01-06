@@ -21,10 +21,21 @@ import sys
 import os
 import re
 import subprocess
+import logging
+from logging.handlers import RotatingFileHandler
 from subliminal import save_subtitles, scan_video, region, download_best_subtitles
 from babelfish import Language
 
+
 WDIR = ""
+if not os.path.isdir('./logs'):
+    os.makedirs('./logs')
+logging.basicConfig(handlers=[RotatingFileHandler('./logs/my_log.log', maxBytes=100000, backupCount=10)],
+                    level=logging.INFO,
+                    format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                    datefmt='%Y-%m-%dT%H:%M:%S')
+# logging.basicConfig(level=logging.DEBUG, filename='log.log',
+#                     filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_mkv_track_id(file_path):
     """ Returns the track ID of the SRT subtitles track"""
@@ -32,7 +43,7 @@ def get_mkv_track_id(file_path):
         raw_info = subprocess.check_output(["mkvmerge", "-i", file_path],
                                             stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as ex:
-        print(ex)
+        logging.error(ex)
         sys.exit(1)
     pattern = re.compile(r'.* (\d+): subtitles \(SubRip/SRT\).*', re.DOTALL)
     m = pattern.match(str(raw_info))
@@ -43,53 +54,53 @@ def get_mkv_track_id(file_path):
 
 
 def download_subs(file):
-    print("    Analyzing video file...")
+    logging.info("    Analyzing video file...")
     try:
         video = scan_video(file['full_path'])
     except ValueError as ex:
-        print("    Failed to analyze video. ", ex)
+        logging.error(f"    Failed to analyze video. {ex}")
         return None
-    print("    Choosing subtitle from online providers...")
+    logging.info("    Choosing subtitle from online providers...")
     best_subtitles = download_best_subtitles({video}, {Language('eng')}, only_one=True)
     if best_subtitles[video]:
         sub = best_subtitles[video][0]
-        print("    Choosen subtitle: {f}".format(f=sub))
-        print("    Downloading...")
+        logging.info("    Choosen subtitle: {f}".format(f=sub))
+        logging.info("    Downloading...")
         save_subtitles(video, [sub], single=True)
     else:
-        print("    ERROR: No subtitles found online.")
+        logging.info("    ERROR: No subtitles found online.")
 
 
 def extract_mkv_subs(file):
-    print("    Extracting embedded subtitles...")
+    logging.info("    Extracting embedded subtitles...")
     try:
         subprocess.call(["mkvextract", "tracks", file['full_path'],
                          file['srt_track_id'] + ":" + file['srt_full_path']])
-        print("    OK.")
+        logging.info("    OK.")
     except subprocess.CalledProcessError:
-        print("    ERROR: Could not extract subtitles")
+        logging.error("    ERROR: Could not extract subtitles")
 
 
 def extract_subs(files):
     for file in files:
-        print("*****************************")
-        print("Directory: {d}".format(d=file['dir']))
-        print("File: {f}".format(f=file['filename']))
+        logging.info("*****************************")
+        logging.info("Directory: {d}".format(d=file['dir']))
+        logging.info("File: {f}".format(f=file['filename']))
         if file['srt_exists']:
-            print("    Subtitles ready. Nothing to do.")
+            logging.info("    Subtitles ready. Nothing to do.")
             continue
         if not file['srt_track_id']:
-            print("    No embedded subtitles found.")
+            logging.info("    No embedded subtitles found.")
             download_subs(file)
         else:
-            print("    Embedded subtitles found.")
+            logging.info("    Embedded subtitles found.")
             extract_mkv_subs(file)
 
 
 def main(argv):
     supported_extensions = ['.mkv', '.mp4', '.avi', '.mpg', '.mpeg']
     if not argv:
-        print("Error, no directory supplied")
+        logging.error("Error, no directory supplied")
         sys.exit(1)
     if not os.path.isdir(argv[1]):
         sys.exit("Error, {f} is not a directory".format(f=argv[1]))
