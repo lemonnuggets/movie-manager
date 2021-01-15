@@ -22,6 +22,8 @@ import substuff
 
 # TODO: Test file by running it as usual.
 
+# TODO: Stop shell from popping up.
+
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon of the appropriate movie.
 
@@ -296,6 +298,7 @@ def on_torrent_finished(torrent):
     elif os.path.isdir(dir_path_2):
         sub_and_rename(dir_path_2)
     else:
+        paths = []
         for dir_ in os.listdir(TO_WATCH_FOLDER):
             sub_and_rename(os.path.join(TO_WATCH_FOLDER, dir_))
         for dir_ in os.listdir(WATCHED_FOLDER):

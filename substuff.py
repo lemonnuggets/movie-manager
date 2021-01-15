@@ -46,9 +46,9 @@ def get_mkv_track_id(file_path):
         logging.error(ex)
         sys.exit(1)
     pattern = re.compile(r'.* (\d+): subtitles \(SubRip/SRT\).*', re.DOTALL)
-    m = pattern.match(str(raw_info))
-    if m:
-        return raw_info, m.group(1)
+    matches = pattern.match(str(raw_info))
+    if matches:
+        return raw_info, matches.group(1)
     else:
         return raw_info, None
 
