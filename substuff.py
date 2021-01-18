@@ -23,7 +23,7 @@ import re
 import subprocess
 import logging
 from logging.handlers import RotatingFileHandler
-from subliminal import save_subtitles, scan_video, region, download_best_subtitles, core
+from subliminal import save_subtitles, scan_video, region, download_best_subtitles, ProviderPool
 from babelfish import Language
 
 
@@ -61,19 +61,17 @@ def download_subs(file, config):
         logging.error(f"    Failed to analyze video. {ex}")
         return None
     try:
-        pool = core.ProviderPool(provider_configs=config)
+        logging.info("    Choosing subtitle from online providers...")
+        best_subtitles = download_best_subtitles(videos = {video}, languages = {Language('eng')}, only_one=True, pool_class=ProviderPool, provider_configs = config)
+        if best_subtitles[video]:
+            sub = best_subtitles[video][0]
+            logging.info("    Choosen subtitle: {f}".format(f=sub))
+            logging.info("    Downloading...")
+            save_subtitles(video, [sub], single=True)
+        else:
+            logging.info("    ERROR: No subtitles found online.")
     except Exception as err:
-        logging.error(f"    Failed to authenticate. {err}")
-        return None
-    logging.info("    Choosing subtitle from online providers...")
-    best_subtitles = download_best_subtitles({video}, {Language('eng')}, pool_class=pool, only_one=True)
-    if best_subtitles[video]:
-        sub = best_subtitles[video][0]
-        logging.info("    Choosen subtitle: {f}".format(f=sub))
-        logging.info("    Downloading...")
-        save_subtitles(video, [sub], single=True)
-    else:
-        logging.info("    ERROR: No subtitles found online.")
+        logging.error(f"    Error downloading subtitles. {err}")
 
 
 def extract_mkv_subs(file):

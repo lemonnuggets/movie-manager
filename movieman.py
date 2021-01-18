@@ -18,8 +18,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import substuff
 
-# !TODO: Pass in config to substuff.main
-
 # TODO: Test file by running it as usual.
 
 # TODO: Stop shell from popping up.
@@ -45,6 +43,10 @@ ADDIC7ED_USERNAME=os.getenv('ADDIC7ED_USERNAME')
 ADDIC7ED_PASSWORD=os.getenv('ADDIC7ED_PASSWORD')
 LEGENDASTV_USERNAME=os.getenv('LEGENDASTV_USERNAME')
 LEGENDASTV_PASSWORD=os.getenv('LEGENDASTV_PASSWORD')
+
+SUB_CONFIG = {"opensubtitles": {"username": OPENSUBTITLES_USERNAME, "password": OPENSUBTITLES_PASSWORD},
+              "addic7ed": {"username": ADDIC7ED_USERNAME, "password": ADDIC7ED_PASSWORD},
+              "legendastv": {"username": LEGENDASTV_USERNAME, "password": LEGENDASTV_PASSWORD}}
 
 MOV_EXTENSIONS = ('.mkv', '.mp4', '.avi', '.mpg', '.mpeg')
 SUB_EXTENSIONS = ('.srt', '.scc', '.vtt', '.ttml', '.aaf')
@@ -281,7 +283,7 @@ def sub_and_rename(dir_path):
     Get subtitle files and rename movie folder.
     """
     logging.info(f"in sub_and_rename({dir_path})->")
-    substuff.main(['substuff.py', dir_path])
+    substuff.main(['substuff.py', dir_path], SUB_CONFIG)
     rename_dir_and_contents(dir_path)
     logging.info(f"leaving sub_and_rename({dir_path})->")
 
