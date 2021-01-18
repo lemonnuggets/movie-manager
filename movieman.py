@@ -18,7 +18,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import substuff
 
-# FIXME: Authentication with subliminal
+# !TODO: Pass in config to substuff.main
 
 # TODO: Test file by running it as usual.
 
@@ -38,6 +38,13 @@ VLC_ML_XSPF = os.path.join(VLC_HIST_FOLDER, 'ml.xspf')                      # la
 DUMP_PATH = os.path.realpath(os.getenv('DUMP_PATH'))                        # Folder for finished torrents.
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
+
+OPENSUBTITLES_USERNAME=os.getenv('OPENSUBTITLES_USERNAME')
+OPENSUBTITLES_PASSWORD=os.getenv('OPENSUBTITLES_PASSWORD')
+ADDIC7ED_USERNAME=os.getenv('ADDIC7ED_USERNAME')
+ADDIC7ED_PASSWORD=os.getenv('ADDIC7ED_PASSWORD')
+LEGENDASTV_USERNAME=os.getenv('LEGENDASTV_USERNAME')
+LEGENDASTV_PASSWORD=os.getenv('LEGENDASTV_PASSWORD')
 
 MOV_EXTENSIONS = ('.mkv', '.mp4', '.avi', '.mpg', '.mpeg')
 SUB_EXTENSIONS = ('.srt', '.scc', '.vtt', '.ttml', '.aaf')

@@ -23,7 +23,7 @@ import re
 import subprocess
 import logging
 from logging.handlers import RotatingFileHandler
-from subliminal import save_subtitles, scan_video, region, download_best_subtitles
+from subliminal import save_subtitles, scan_video, region, download_best_subtitles, core
 from babelfish import Language
 
 
@@ -53,15 +53,20 @@ def get_mkv_track_id(file_path):
         return raw_info, None
 
 
-def download_subs(file):
+def download_subs(file, config):
     logging.info("    Analyzing video file...")
     try:
         video = scan_video(file['full_path'])
     except ValueError as ex:
         logging.error(f"    Failed to analyze video. {ex}")
         return None
+    try:
+        pool = core.ProviderPool(provider_configs=config)
+    except Exception as err:
+        logging.error(f"    Failed to authenticate. {err}")
+        return None
     logging.info("    Choosing subtitle from online providers...")
-    best_subtitles = download_best_subtitles({video}, {Language('eng')}, only_one=True)
+    best_subtitles = download_best_subtitles({video}, {Language('eng')}, pool_class=pool, only_one=True)
     if best_subtitles[video]:
         sub = best_subtitles[video][0]
         logging.info("    Choosen subtitle: {f}".format(f=sub))
@@ -81,7 +86,7 @@ def extract_mkv_subs(file):
         logging.error("    ERROR: Could not extract subtitles")
 
 
-def extract_subs(files):
+def extract_subs(files, config):
     for file in files:
         logging.info("*****************************")
         logging.info("Directory: {d}".format(d=file['dir']))
@@ -91,13 +96,13 @@ def extract_subs(files):
             continue
         if not file['srt_track_id']:
             logging.info("    No embedded subtitles found.")
-            download_subs(file)
+            download_subs(file, config)
         else:
             logging.info("    Embedded subtitles found.")
             extract_mkv_subs(file)
 
 
-def main(argv):
+def main(argv, config=None):
     supported_extensions = ['.mkv', '.mp4', '.avi', '.mpg', '.mpeg']
     if not argv:
         logging.error("Error, no directory supplied")
@@ -134,7 +139,7 @@ def main(argv):
                                   'srt_exists': srt_exists,
                                   'raw_info': raw_track_info
                                   })
-    extract_subs(file_list)
+    extract_subs(file_list, config)
 
 
 if __name__ == '__main__':
