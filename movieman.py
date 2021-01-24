@@ -16,11 +16,8 @@ from logging.handlers import RotatingFileHandler
 import dotenv
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from sys import exit as EXIT
 import substuff
-
-# TODO: Test file by running it as usual.
-
-# TODO: Stop shell from popping up.
 
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon of the appropriate movie.
@@ -349,3 +346,7 @@ except KeyboardInterrupt:
     new_watched_observer.stop()
     logging.info("Stopped observing->" + VLC_HIST_FOLDER)
     logging.info("Stopped observing->" + DUMP_PATH)
+    EXIT()
+new_watched_observer.stop()
+logging.info("Stopped observing->" + VLC_HIST_FOLDER)
+logging.info("Stopped observing->" + DUMP_PATH)

@@ -5,3 +5,4 @@ venv/
 dump/
 logs/
 movieman.bat
+*.safe

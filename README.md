@@ -1,6 +1,6 @@
 # movieman
 
-A python script that to manage your movie folder. (Only tested on Windows[And not well enough yet])
+A python script that to manage your movie folder. (Only tested on Windows)
 
 ## Features
 
@@ -44,6 +44,16 @@ Ensure that you're using qBitTorrent as your torrent client. If your torrent cli
 ### Set-Up Instructions
 
 Make sure the #Prerequisites are installed.
+
+#### Automatic Setup
+
+Run the setup.py file and give the required responses very carefully.
+
+*SETUP.PY WILL NOT PROMPT YOU IF YOU MADE MISTAKES IN YOUR INPUTS.*
+
+If you don't understand what the setup.py file is asking for look at the manual setup to get an idea of what values are required.
+
+#### Manual Setup
 
 Add the following environment variables to a .env file in the same folder as movieman.py.
 
@@ -95,7 +105,6 @@ Make movieman.py run at start up. One way to do this would be to press "WIN + R"
 
 - [X] Automatically rename movies, folders and subtitles to a uniform format {Name of movie (<year of release>)}.ext}
 
+- [X] Automatically setup environment and make script run at startup by running setup.py.
+
 - [ ] When a .png file is added to the titlescreens folder automatically make it the directory icon of the appropriate movie.
-
-- [ ] Set environment variables interactively by running the script with a ```--set-config``` flag
-

@@ -1,3 +1,0 @@
-
-@echo off
-pythonw.exe "full\path\to\movieman\movieman.py"
