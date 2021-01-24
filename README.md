@@ -47,23 +47,37 @@ Make sure the #Prerequisites are installed.
 
 Add the following environment variables to a .env file in the same folder as movieman.py.
 
+    LOG_PATH="Path to folder where you want log files to be stored. Preferably create a log file in the directory where you've installed the script and put that path here."
     VLC_HIST_FOLDER="Path to folder that opens up when you press Win+R, and run '%APPDATA%\vlc'"
     DUMP_PATH="Path to a folder for QBitTorrent to dump torrent files into"
     THUMBNAILS_FOLDER="Path to the folder where your movie thumbnails are stored"
     TO_WATCH_FOLDER="Path to folder where you keep movies that are yet to be watched"
     WATCHED_FOLDER="Path to folder where you keep the movies that you have watched already"
+    OPENSUBTITLES_USERNAME="Opensubtitles Username"
+    OPENSUBTITLES_PASSWORD="Opensubtitles Password"
+    ADDIC7ED_USERNAME="Addic7ed Username"
+    ADDIC7ED_PASSWORD="Addic7ed Password"
+    LEGENDASTV_USERNAME="LegendasTV Username"
+    LEGENDASTV_PASSWORD="LegendasTV Password"
 
 An example .env file would contain values looking something like this
 
+    LOG_PATH="C:/Users/{username}/OneDrive/Desktop/ProgrammingStuff/python/movieman/log"
     VLC_HIST_FOLDER="C:/Users/{username}/AppData/Roaming/vlc"
     DUMP_PATH="C:/Users/{username}/OneDrive/Desktop/ProgrammingStuff/python/movieman/dump"
     THUMBNAILS_FOLDER="C:/Users/{username}/Videos/.MOVIES/title-screens"
     TO_WATCH_FOLDER="C:/Users/{username}/Videos/.MOVIES/to-watch"
     WATCHED_FOLDER="C:/Users/{username}/Videos/.MOVIES/watched"
+    OPENSUBTITLES_USERNAME="username"
+    OPENSUBTITLES_PASSWORD="password"
+    ADDIC7ED_USERNAME="username"
+    ADDIC7ED_PASSWORD="password"
+    LEGENDASTV_USERNAME="username"
+    LEGENDASTV_PASSWORD="password"
 
 Go to qBitTorrent > Tools > Options > Downloads and check "Copy .torrent files for finished downloads to" and set the destination folder to same path as DUMP_PATH from your .env file.
 
-Make movieman.py run at start up.
+Make movieman.py run at start up. One way to do this would be to press "WIN + R", type "shell:startup", make a bat file called "movieman.bat" in the folder that opens up. Copy the contents of the movieman.bat.example file from this repo and change the path as required.
 
 ## Thanks
 

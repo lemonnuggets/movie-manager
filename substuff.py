@@ -28,12 +28,6 @@ from babelfish import Language
 
 
 WDIR = ""
-if not os.path.isdir('./logs'):
-    os.makedirs('./logs')
-logging.basicConfig(handlers=[RotatingFileHandler('./logs/my_log.log', maxBytes=100000, backupCount=10)],
-                    level=logging.INFO,
-                    format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                    datefmt='%Y-%m-%dT%H:%M:%S')
 # logging.basicConfig(level=logging.DEBUG, filename='log.log',
 #                     filemode='a', format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -100,7 +94,13 @@ def extract_subs(files, config):
             extract_mkv_subs(file)
 
 
-def main(argv, config=None):
+def main(argv, log_path='.\logs', config=None):
+    if not os.path.isdir(log_path):
+        os.makedirs(log_path)
+    logging.basicConfig(handlers=[RotatingFileHandler(os.path.join(log_path, 'substuff.log'), maxBytes=100000, backupCount=10)],
+                        level=logging.INFO,
+                        format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                        datefmt='%Y-%m-%dT%H:%M:%S')
     supported_extensions = ['.mkv', '.mp4', '.avi', '.mpg', '.mpeg']
     if not argv:
         logging.error("Error, no directory supplied")

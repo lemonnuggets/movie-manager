@@ -34,6 +34,7 @@ VLC_HIST_FILE = os.path.join(VLC_HIST_FOLDER, 'vlc-qt-interface.ini')       # of
 VLC_ML_XSPF = os.path.join(VLC_HIST_FOLDER, 'ml.xspf')                      # last file that vlc moves before
 
 DUMP_PATH = os.path.realpath(os.getenv('DUMP_PATH'))                        # Folder for finished torrents.
+LOG_PATH = os.path.realpath(os.getenv('LOG_PATH'))                          # Folder where logs are stored
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
 
@@ -53,9 +54,9 @@ SUB_EXTENSIONS = ('.srt', '.scc', '.vtt', '.ttml', '.aaf')
 
 configur = ConfigParser(interpolation=None)
 configur.read(VLC_HIST_FILE)
-if not os.path.isdir('./logs'):
-    os.makedirs('./logs')
-logging.basicConfig(handlers=[RotatingFileHandler('./logs/my_log.log',
+if not os.path.isdir(LOG_PATH):
+    os.makedirs(LOG_PATH)
+logging.basicConfig(handlers=[RotatingFileHandler(os.path.join(LOG_PATH, 'movieman.log'),
                                                   maxBytes=100000, backupCount=10)],
                     level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
@@ -283,7 +284,7 @@ def sub_and_rename(dir_path):
     Get subtitle files and rename movie folder.
     """
     logging.info(f"in sub_and_rename({dir_path})->")
-    substuff.main(['substuff.py', dir_path], SUB_CONFIG)
+    substuff.main(argv=['substuff.py', dir_path], log_path=LOG_PATH, config=SUB_CONFIG)
     rename_dir_and_contents(dir_path)
     logging.info(f"leaving sub_and_rename({dir_path})->")
 
