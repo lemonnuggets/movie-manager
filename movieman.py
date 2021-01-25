@@ -4,6 +4,7 @@ movieman
 A python script to manage your movies.
 """
 import os
+import subprocess
 import shutil
 import time
 import tkinter as tk
@@ -20,9 +21,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from PIL import Image
 
-# TODO: When a .png file is added to the titlescreens folder automatically make
-# it the directory icon of the appropriate movie.
-
 PROG_NAME = "movieman"
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -35,6 +33,7 @@ DUMP_PATH = os.path.realpath(os.getenv('DUMP_PATH'))                        # Fo
 LOG_PATH = os.path.realpath(os.getenv('LOG_PATH'))                          # Folder where logs are stored
 WATCHED_FOLDER = os.path.realpath(os.getenv('WATCHED_FOLDER'))
 TO_WATCH_FOLDER = os.path.realpath(os.getenv('TO_WATCH_FOLDER'))
+THUMBNAILS_FOLDER = os.path.realpath(os.getenv('THUMBNAILS_FOLDER'))
 
 OPENSUBTITLES_USERNAME=os.getenv('OPENSUBTITLES_USERNAME')
 OPENSUBTITLES_PASSWORD=os.getenv('OPENSUBTITLES_PASSWORD')
@@ -49,6 +48,14 @@ SUB_CONFIG = {"opensubtitles": {"username": OPENSUBTITLES_USERNAME, "password": 
 
 MOV_EXTENSIONS = ('.mkv', '.mp4', '.avi', '.mpg', '.mpeg')
 SUB_EXTENSIONS = ('.srt', '.scc', '.vtt', '.ttml', '.aaf')
+
+INI_CONTENT = """[.ShellClassInfo]
+IconResource=icon.ico,0
+[ViewState]
+Mode=
+Vid=
+FolderType=Pictures
+"""
 
 configur = ConfigParser(interpolation=None)
 configur.read(VLC_HIST_FILE)
@@ -76,11 +83,12 @@ class MovieHandler(FileSystemEventHandler):
         logging.info(f"ANY EVENT -> {event}")
 
     def on_modified(self, event):
-        if self.on_modified_callback and self.src_folder and self.dest_folder and self.file_to_track:
-            self.on_modified_callback(self.src_folder, self.dest_folder,
-                                      self.file_to_track, event.src_path)
-        else:
-            self.on_modified_callback(event.src_path)
+        if self.on_modified_callback:
+            if self.src_folder and self.dest_folder and self.file_to_track:
+                self.on_modified_callback(self.src_folder, self.dest_folder,
+                                        self.file_to_track, event.src_path)
+            else:
+                self.on_modified_callback(event.src_path)
 
 def is_movie_watched(movie_path):
     """
@@ -334,6 +342,61 @@ def show_script_started():
     answer = askokcancel(title=PROG_NAME, message=message, parent=window)
     window.destroy()
 
+def make_square(im, min_size=256, fill_color=(0, 0, 0, 0)):
+    """
+    Arguments: PIL.Image Object, minimum size, rgba fill value
+    Returns: Returns a PIL.Image object that is a square shape.
+    """
+    x, y = im.size
+    size = max(min_size, x, y)
+    new_im = Image.new('RGBA', (size, size), fill_color)
+    new_im.paste(im, (int((size - x) / 2), int((size - y) / 2)))
+    return new_im
+
+def add_thumbnail(dir_path):
+    """
+    Checks if dir_path contains a .png file.
+    If it does then this function
+        1. Creates a hidden icon.ico file from that .png image
+        2. Makes icon.ico the directory icon for the movie
+        3. Moves .png file to thumbnails folder, with proper name.
+    """
+    logging.info(f"in add_thumbnail({dir_path}) ->")
+    if os.path.isdir(dir_path):
+        name = get_new_movie_filename(dir_path)
+        for file_ in os.listdir(dir_path):
+            _, ext = os.path.splitext(file_)
+            if ext == '.png':
+                old_path = os.path.join(dir_path, file_)
+                new_path = os.path.join(THUMBNAILS_FOLDER, name + '.png')
+                ico_path = os.path.join(dir_path, 'icon.ico')
+                ini_path =os.path.join(dir_path, 'desktop.ini')
+                try:
+                    img = Image.open(old_path)
+                    img = make_square(img, fill_color=(255,255,255,0))
+                    if os.path.isfile(ico_path):
+                        os.remove(ico_path)
+                    img.save(ico_path, format='ICO')
+                    subprocess.check_call(["attrib","+H", ico_path])
+                    logging.info(f'Added icon.ico to {dir_path}')
+                except Exception as ex:
+                    logging.error(ex)
+
+                try:
+                    logging.info(f'Making icon.ico the thumbnail of {dir_path}')
+                    if os.path.isfile(ini_path):
+                        os.remove(ini_path)
+                    with open(ini_path, 'w') as ini_file:
+                        ini_file.writelines(INI_CONTENT)
+                    subprocess.check_call(["attrib","+H","+S",ini_path])
+                except Exception as ex:
+                    logging.error(ex)
+
+                shutil.move(old_path, new_path)
+                logging.info(f'Moved {old_path} to {new_path}')
+                break
+    logging.info(f"leaving add_thumbnail({dir_path}) ->")
+
 new_watched_event_handler = MovieHandler(on_modified_callback=on_vlc_closed, src_folder=TO_WATCH_FOLDER,
                                          dest_folder=WATCHED_FOLDER, file_to_track=VLC_ML_XSPF)
 new_watched_observer = Observer()                                           # monitoring VLC_HIST_FOLDER
@@ -347,6 +410,13 @@ new_movie_observer.schedule(new_movie_event_handler, DUMP_PATH)             # mo
 new_movie_observer.start()                                                  # and when a new torrent fie is added program
 logging.info("Started observing->" + DUMP_PATH)                             # knows that there is a new movie.
 
+
+new_titlescreen_event_handler = MovieHandler(on_modified_callback=add_thumbnail)
+new_movie_observer = Observer()
+new_movie_observer.schedule(new_titlescreen_event_handler, TO_WATCH_FOLDER)
+new_movie_observer.start()
+logging.info("Started observing->" + TO_WATCH_FOLDER)
+
 try:
     show_script_started()
     while True:
@@ -355,7 +425,9 @@ except KeyboardInterrupt:
     new_watched_observer.stop()
     logging.info("Stopped observing->" + VLC_HIST_FOLDER)
     logging.info("Stopped observing->" + DUMP_PATH)
+    logging.info("Stopped observing->" + TO_WATCH_FOLDER)
     EXIT()
 new_watched_observer.stop()
 logging.info("Stopped observing->" + VLC_HIST_FOLDER)
 logging.info("Stopped observing->" + DUMP_PATH)
+logging.info("Stopped observing->" + TO_WATCH_FOLDER)

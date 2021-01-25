@@ -16,6 +16,8 @@ A python script that to manage your movie folder. (Only tested on Windows)
 
         Another Round (2020)
 
+- When a .png file is added to a movie folder in the to watch folder, this .png file is moved to the thumbnails folder and is also set as the icon of the movie directory.
+
 ## Prerequisites
 
 [Python 3.x](https://www.python.org/downloads/)
@@ -33,7 +35,7 @@ A python script that to manage your movie folder. (Only tested on Windows)
 Ensure that you use VLC media player to watch your movies. This application cannot detect movies that have been watched on
 any other media player.
 
-Ensure that you're using qBitTorrent as your torrent client. If your torrent client has a feature to dump finished torrent files into a specified folder then this may work as well. Add DUMP_PATH varaible accordingly.
+Ensure that you're using qBitTorrent as your torrent client. If your torrent client has a feature to dump finished torrent files into a specified folder then this may work as well. Add DUMP_PATH variable accordingly.
 
 ### Installation Instructions
 
@@ -107,4 +109,4 @@ Make movieman.py run at start up. One way to do this would be to press "WIN + R"
 
 - [X] Automatically setup environment and make script run at startup by running setup.py.
 
-- [ ] When a .png file is added to the titlescreens folder automatically make it the directory icon of the appropriate movie.
+- [X] When a .png file is added to a movie folder automatically make it the directory icon of the appropriate movie.
