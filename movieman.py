@@ -7,17 +7,18 @@ import os
 import shutil
 import time
 import tkinter as tk
-from tkinter.messagebox import askokcancel, askretrycancel
-from configparser import ConfigParser
 import urllib.parse
 import re
 import logging
+from tkinter.messagebox import askokcancel, askretrycancel
+from configparser import ConfigParser
 from logging.handlers import RotatingFileHandler
+from sys import exit as EXIT
 import dotenv
+import substuff
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from sys import exit as EXIT
-import substuff
+from PIL import Image
 
 # TODO: When a .png file is added to the titlescreens folder automatically make
 # it the directory icon of the appropriate movie.
@@ -298,12 +299,19 @@ def on_torrent_finished(torrent):
     logging.info(f"in on_torrent_finished({torrent}) ->")
     clear_except(DUMP_PATH, torrent)
     old_name = os.path.splitext(os.path.basename(torrent))[0]
+    new_name = get_new_movie_filename(old_name)
     dir_path_1 = os.path.join(TO_WATCH_FOLDER, old_name)
     dir_path_2 = os.path.join(WATCHED_FOLDER, old_name)
+    dir_path_3 = os.path.join(TO_WATCH_FOLDER, new_name)
+    dir_path_4 = os.path.join(WATCHED_FOLDER, new_name)
     if os.path.isdir(dir_path_1):
         sub_and_rename(dir_path_1)
     elif os.path.isdir(dir_path_2):
         sub_and_rename(dir_path_2)
+    elif os.path.isdir(dir_path_3):
+        sub_and_rename(dir_path_3)
+    elif os.path.isdir(dir_path_4):
+        sub_and_rename(dir_path_4)
     else:
         paths = []
         for dir_ in os.listdir(TO_WATCH_FOLDER):
@@ -332,11 +340,12 @@ new_watched_observer = Observer()                                           # mo
 new_watched_observer.schedule(new_watched_event_handler, VLC_HIST_FOLDER)   # To detect when vlc is closed and
 new_watched_observer.start()                                                # which movies were recently watched.
 logging.info("Started observing->" + VLC_HIST_FOLDER)
+
 new_movie_event_handler = MovieHandler(on_modified_callback=on_torrent_finished)
 new_movie_observer = Observer()
-new_movie_observer.schedule(new_movie_event_handler, DUMP_PATH)
-new_movie_observer.start()
-logging.info("Started observing->" + DUMP_PATH)
+new_movie_observer.schedule(new_movie_event_handler, DUMP_PATH)             # monitoring dump path for torrent files
+new_movie_observer.start()                                                  # and when a new torrent fie is added program
+logging.info("Started observing->" + DUMP_PATH)                             # knows that there is a new movie.
 
 try:
     show_script_started()
