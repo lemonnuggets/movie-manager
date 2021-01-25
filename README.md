@@ -1,6 +1,6 @@
 # movieman
 
-A python script that to manage your movie folder. (Only tested on Windows)
+A python script that to manage your movie folder. (Windows Only)
 
 ## Features
 
@@ -16,7 +16,7 @@ A python script that to manage your movie folder. (Only tested on Windows)
 
         Another Round (2020)
 
-- When a .png file is added to a movie folder in the to watch folder, this .png file is moved to the thumbnails folder and is also set as the icon of the movie directory.
+- When a .png file is added to a movie folder in the to watch folder, this .png file is moved to the thumbnails folder and is also set as the icon of the movie directory. You might not immediately see the change as Windows must update its icon cache for the change to be visible.
 
 ## Prerequisites
 
