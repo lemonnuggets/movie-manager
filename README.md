@@ -1,6 +1,6 @@
 # movieman
 
-A python script that to manage your movie folder. (Windows Only)
+A python script to manage your movie folder. (Windows Only)
 
 ## Features
 
