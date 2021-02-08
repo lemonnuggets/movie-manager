@@ -2,7 +2,7 @@
 
 A python script to manage your movie folder. (Windows Only)
 
-## Features
+# Features
 
 - Automatically move recently watched movies to another folder.
 
@@ -18,7 +18,7 @@ A python script to manage your movie folder. (Windows Only)
 
 - When a .png file is added to a movie folder in the to watch folder, this .png file is moved to the thumbnails folder and is also set as the icon of the movie directory. You might not immediately see the change as Windows must update its icon cache for the change to be visible.
 
-## Prerequisites
+# Prerequisites
 
 [Python 3.x](https://www.python.org/downloads/)
 
@@ -28,26 +28,28 @@ A python script to manage your movie folder. (Windows Only)
 
 [QBitTorrent](https://www.qbittorrent.org/download.php)
 
-## Instructions
+# Instructions
 
-### General Instructions
+## General Instructions  
 
 Ensure that you use VLC media player to watch your movies. This application cannot detect movies that have been watched on
 any other media player.
 
 Ensure that you're using qBitTorrent as your torrent client. If your torrent client has a feature to dump finished torrent files into a specified folder then this may work as well. Add DUMP_PATH variable accordingly.
 
-### Installation Instructions
+## Installation Instructions
+
 
     git clone https://www.github.com/lemonnuggets/movieman.git
     cd movieman
     pip install -r requirements.txt
 
-### Set-Up Instructions
+## Set-Up Instructions
+
 
 Make sure the #Prerequisites are installed.
 
-#### Automatic Setup
+### Automatic Setup
 
 Run the setup.py file and give the required responses very carefully.
 
@@ -55,7 +57,7 @@ Run the setup.py file and give the required responses very carefully.
 
 If you don't understand what the setup.py file is asking for look at the manual setup to get an idea of what values are required.
 
-#### Manual Setup
+### Manual Setup
 
 Add the following environment variables to a .env file in the same folder as movieman.py.
 
@@ -91,7 +93,7 @@ Go to qBitTorrent > Tools > Options > Downloads and check "Copy .torrent files f
 
 Make movieman.py run at start up. One way to do this would be to press "WIN + R", type "shell:startup", make a bat file called "movieman.bat" in the folder that opens up. Copy the contents of the movieman.bat.example file from this repo and change the path as required.
 
-## Thanks
+# Thanks
 
 [Jorti's extract-subs](https://github.com/jorti/extract-subs)
 
@@ -99,14 +101,14 @@ Make movieman.py run at start up. One way to do this would be to press "WIN + R"
 
 [Watchdog](https://pypi.org/project/watchdog/)
 
-## TODO
+# TODO
 
-- [X] Automatically move movie that user has watched from to-watch/ folder to watched/ folder
+- [X] ~Automatically move movie that user has watched from to-watch/ folder to watched/ folder~
 
-- [X] When movies are downloaded, check if subtitles are there. If not then download subtitles.
+- [X] ~When movies are downloaded, check if subtitles are there. If not then download subtitles.~
 
-- [X] Automatically rename movies, folders and subtitles to a uniform format {Name of movie (<year of release>)}.ext}
+- [X] ~Automatically rename movies, folders and subtitles to a uniform format {Name of movie (<year of release>)}.ext}~
 
-- [X] Automatically setup environment and make script run at startup by running setup.py.
+- [X] ~Automatically setup environment and make script run at startup by running setup.py.~
 
-- [X] When a .png file is added to a movie folder automatically make it the directory icon of the appropriate movie.
+- [X] ~When a .png file is added to a movie folder automatically make it the directory icon of the appropriate movie.~
